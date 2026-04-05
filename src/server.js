@@ -1,6 +1,7 @@
 import express from 'express';
 import movieRouter from './routers/movieRoutes.js';
 import authRouter from './routers/authRoutes.js';
+import watchlistRouter from './routers/watchListRoutes.js';
 import dotenv from 'dotenv';
 import { connectDB, disConnectDB } from './config/db.js';
 
@@ -15,6 +16,7 @@ app.use(express.urlencoded({extended: true}))
 
 app.use('/movies',movieRouter);
 app.use('/auth',authRouter);
+app.use('/watchlist',watchlistRouter);
 
 const PORT = 5001;
 
