@@ -1,95 +1,93 @@
 import { prisma } from "../config/db.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../util/generateToken.js";
+import { AppError } from "../utils/appError.js";
 
-const register = async (req, res) => {
-    const {name, email, password} = req.body;
-    const userExist = await prisma.user.findUnique({
-        where: { email: email },
-    });
+const register = async (req, res, next) => {
+    try {
+        const { name, email, password } = req.body;
+        const userExist = await prisma.user.findUnique({
+            where: { email },
+        });
 
-    if(userExist){
-        res.status(400).json({
-            error: "User with email already existed."
-        })
-    }
+        if (userExist) {
+            return next(new AppError("User with email already exists.", 403));
+        }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    
-    const user = await prisma.user.create({
-        data: {
-            email,
-            name,
-            password: hashedPassword,
-        },
-    });
-
-    const token = generateToken(user.id, res);
-
-    res.json({
-        status:  "success",
-        data: {
-            user: {
-                id: user.id,
-                name: name,
-                email: email
-            }
-        },
-        token
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
         
-    });
-}
+        const user = await prisma.user.create({
+            data: {
+                email,
+                name,
+                password: hashedPassword,
+            },
+        });
 
-const login = async (req, res) => {
-    const {email, password } = req.body;
-    const user = await prisma.user.findUnique({
-        where: { email: email },
-    });
+        const token = generateToken(user.id, res);
 
-    if(!user)
-    {
-        res.status(401).json({
-            error: "User with email does not exist."
-        })
+        res.json({
+            status: "success",
+            data: {
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                },
+            },
+            token,
+        });
+    } catch (err) {
+        next(err);
     }
+};
 
-    const isPasswordValid = await bcrypt.compare(password, user.password); 
+const login = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
 
-    if(!isPasswordValid)
-    {
-        res.status(401).json({
-            error: "Invalid email or password."
-        })
+        if (!user) {
+            return next(new AppError("User with email does not exist.", 401));
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password); 
+
+        if (!isPasswordValid) {
+            return next(new AppError("Invalid email or password.", 401));
+        }
+
+        const token = generateToken(user.id, res);
+
+        res.json({
+            status: "success",
+            data: {
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                },
+            },
+            token,
+        });
+    } catch (err) {
+        next(err);
     }
-
-    const token = generateToken(user.id, res);
-
-    res.json({
-        status: "success",
-        data: {
-            user: {
-                id: user.id,
-                name: user.name,
-                email: email
-            }
-        },
-        token
-    })
-}
-
+};
 
 const logout = async (req, res) => {
-    res.cookie("jwt","", {
+    res.cookie("jwt", "", {
         httpOnly: true,
         expires: new Date(0),
     });
 
     res.json({
-        status:  "success",
-        message: "Logout successfully"
-        
+        status: "success",
+        message: "Logout successfully",
     });
-}
+};
 
-export {register, login, logout};
+export { register, login, logout };

@@ -1,22 +1,26 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/db.js";
+import { AppError } from "../utils/appError.js";
 
-export const authMiddleware = async (req, res, next) => {
+export const authMiddleware =  async (req, res, next)=> {
     let token;
     
-    if(req.headers.authorization && req.headers.authorization.startsWith("Bear"))
-    {
-        token = req.headers.authorization.split(" ")[1];
-    }else if(req.cookies?.jwt)
+    if (req.headers.authorization) {
+        const [scheme, credentials] = req.headers.authorization.split(" ");
+
+        if (scheme === "Bearer" && credentials) {
+            token = credentials;
+        }
+    }
+
+    if(!token && req.cookies?.jwt)
     {
         token = req.cookies?.jwt;
     }
 
     if(!token)
     {
-        return res.status(401).json({
-            error: "No authorization. No token validate"
-        });
+        return next(new AppError("No authorization token provided", 401));
     }
 
     try{
@@ -28,15 +32,11 @@ export const authMiddleware = async (req, res, next) => {
 
         if(!user)
         {
-            return res.status(401).json({
-                error: "User no longer exist"
-            });
+            return next(new AppError("User no longer exists", 401));
         }
         req.user = user;
         next();
     }catch(err) {
-        return res.status(401).json({
-            error: "No authorization. No token validate"
-        });
+        return next(new AppError("Invalid or expired token", 401));
     }
 }

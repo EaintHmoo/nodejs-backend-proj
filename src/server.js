@@ -4,6 +4,7 @@ import authRouter from './routers/authRoutes.js';
 import watchlistRouter from './routers/watchListRoutes.js';
 import dotenv from 'dotenv';
 import { connectDB, disConnectDB } from './config/db.js';
+import { errorHandler, notFound } from './middlewares/errorMiddleware.js';
 
 const app = express();
 
@@ -17,6 +18,8 @@ app.use(express.urlencoded({extended: true}))
 app.use('/movies',movieRouter);
 app.use('/auth',authRouter);
 app.use('/watchlist',watchlistRouter);
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = 5001;
 
